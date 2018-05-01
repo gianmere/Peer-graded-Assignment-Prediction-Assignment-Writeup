@@ -315,11 +315,12 @@ print(cm_rf)</code></pre>
 ## Detection Rate         0.2843   0.1908   0.1730   0.1619   0.1839
 ## Detection Prevalence   0.2862   0.1915   0.1755   0.1626   0.1842
 ## Balanced Accuracy      0.9984   0.9926   0.9946   0.9939   0.9998</code></pre>
-<p>This is even better than the “boosted trees”:0.9939.</p>
+<p>The accuracy is even better than the “boosted trees”:0.9939.</p>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
 <p>The “random forest”“is the method we choose because it has the best performances.<br />
+The expected out of sample error is 1-accuracy so it is 0,0061.<br />
 We use it to predict outcomes of the test data set, as follows:</p>
 <pre class="r"><code>FinalPrediction &lt;- predict(model_rf, testing)
 print(FinalPrediction)</code></pre>

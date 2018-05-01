@@ -116,10 +116,11 @@ pred_rf <- predict(model_rf, newdata=validationData)
 cm_rf <- confusionMatrix(pred_rf, validationData$classe)
 print(cm_rf)
 ```
-This is even better than the "boosted trees":0.9939.
+The accuracy is even better than the "boosted trees":0.9939.
 
 ##Results
 The "random forest""is the method we choose because it has the best performances.  
+The expected out of sample error is 1-accuracy so it is 0,0061.  
 We use it to predict outcomes of the test data set, as follows:
 ```{r cache=TRUE}
 FinalPrediction <- predict(model_rf, testing)
