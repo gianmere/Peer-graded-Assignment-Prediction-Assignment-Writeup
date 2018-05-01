@@ -9,22 +9,119 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+##Overview
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit, it's possible to collect a large amount of data about personal activity relatively simply. With this data we can predict the manner in which participants perform a barbell lift. For this purpose, six people were asked to perform the same set of exercises correctly and incorrectly with accelerometers placed on the belt, forearm, arm, and dumbell.
+The result of each performance could be one of this class:
+Class A: exactly according to the specification
+Class B: throwing the elbows to the front
+Class C: lifting the dumbbell only halfway
+Class D: lowering the dumbbell only halfway
+Class E: throwing the hips to the front
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+The goal of this project of the Coursera Practical Machine Learning course is to predict the manner in which people did the exercise, starting from the data collected by accelerometers.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+##Cleaning and preparing the data
 
-```{r cars}
-summary(cars)
+The first step is to load the data. 
+```{r}
+library(caret)
+training <- read.csv("training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing <- read.csv("testing.csv", na.strings=c("NA","#DIV/0!", ""))
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Then it's useful to see the structure of the dataset (I hide the rusult to save space):
+```{r results='hide'}
+str(training)
 ```
+It can be noted that there are non valid values, like the abreviation "NA" (for not available), the string "#DIV/01", and the empty value for num values.
+All these values can be considered "null"" values:
+```{r}
+training <- read.csv("training.csv", na.strings=c("NA","#DIV/0!", ""))
+testing <- read.csv("testing.csv", na.strings=c("NA","#DIV/0!", ""))
+```
+Looking at the structure of the dataset we noticed some useless columns.
+These column are removed:
+```{r}
+training <- training[,-c(1,2,3,4,5,6,7)]
+testing <- testing[,-c(1,2,3,4,5,6,7)]
+```
+We remove other not useful column, like those with small variance
+```{r}
+nsv <- nearZeroVar(training)
+training <- training[, -nsv]
+testing <- testing[, -nsv]
+```
+At last we remove column with more than 75% of null values
+```{r}
+smallNA <- colSums(is.na(training)) < (nrow(training) * 0.75)
+training <- training[, smallNA]
+testing <- testing[, smallNA]
+```
+```{r}
+dim(training)
+```
+##Prediction Model Selection
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+First we split the train dataset in two parts. The first one will be use to build the predictive models (train dataset), and the second one to check the accuracy of the model (validation dataset).
+
+```{r}
+set.seed(50318) # For reproducibile purpose
+inTrain <- createDataPartition(training$classe, p=0.70, list=F)
+trainData <- training[inTrain, ]
+validationData <- training[-inTrain, ]
+```
+The model with the best accuracy will be chose and use in last to predict the required outcomes of the test dataset.
+
+To choose the best model, we compare the most used ones.
+For each of them we build the predictive model on the subtrain data set, then predict on the validation data set and finally create the "Confusion matrix" to measure the precision of the model.
+
+The first model we consider it's the Decision Tree.
+```{r cache=TRUE}
+model_rpart <- train(classe ~ ., data=trainData, method='rpart')
+pred_rpart <- predict(model_rpart, newdata=validationData)
+cm_rpart <- confusionMatrix(pred_rpart, validationData$classe)
+print(cm_rpart)
+```
+The "accuracy" is not so good: it's only 0.4923. 
+Following it's showed the classification tree:
+```{r}
+library(rpart.plot)
+rpart.plot(model_rpart$finalModel)
+```
+The second model is "boosted trees":
+```{r cache=TRUE, results='hide'}
+model_gbm <- train(classe ~ ., data=trainData, method='gbm')
+pred_gbm <- predict(model_gbm, newdata=validationData)
+```
+```{r cache=TRUE}
+cm_gbm <- confusionMatrix(pred_gbm, validationData$classe)
+print(cm_gbm)
+```
+The accuracy is a lot better:  0.9594. 
+The third is linear discriminant analysis:
+```{r cache=TRUE, results='hide'}
+model_lda <- train(classe ~ ., data=trainData, method='lda')
+pred_lda <- predict(model_lda, newdata=validationData)
+```
+```{r cache=TRUE}
+cm_lda <- confusionMatrix(pred_lda, validationData$classe)
+print(cm_lda)
+```
+The accuracy has a value between the two previus methods:  0.7028.  
+The last is the random forest:
+```{r cache=TRUE, results='hide'}
+model_rf <- train(classe ~ ., data=trainData, method='rf')
+pred_rf <- predict(model_rf, newdata=validationData)
+```
+```{r cache=TRUE}
+cm_rf <- confusionMatrix(pred_rf, validationData$classe)
+print(cm_rf)
+```
+This is even better than the "boosted trees":0.9939.
+
+##Results
+The "random forest""is the method we choose because it has the best performances.  
+We use it to predict outcomes of the test data set, as follows:
+```{r cache=TRUE}
+FinalPrediction <- predict(model_rf, testing)
+print(FinalPrediction)
+```
